@@ -11,7 +11,7 @@ namespace ServiceСoffeeRoom.Domain
     {
         const int _priceService = 100;
         [Column]
-        public string Name { get; private set; }
+        public string Name { get; private set; } = string.Empty;
 
         [Column]
         [ForeignKey("FK_Rooms_Persons_AdminId")]

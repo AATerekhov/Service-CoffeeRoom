@@ -8,7 +8,7 @@ namespace ServiceCoffeeRoom.Services.Applications.DtoModel.Room
 {
     public class CreateRoomDto
     {
-        public string Name { get; set; }
+        public required string Name { get; set; }
         public long AdminId { get; set; }
     }
 }

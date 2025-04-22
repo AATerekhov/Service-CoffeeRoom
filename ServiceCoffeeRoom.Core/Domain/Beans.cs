@@ -1,8 +1,7 @@
-﻿using ServiceСoffeeRoom.Domain.Base;
-using LinqToDB.Mapping;
+﻿using ServiceCoffeeRoom.Core.Domain.Base;
+using ServiceСoffeeRoom.Domain.Base;
 using ColumnAttribute = LinqToDB.Mapping.ColumnAttribute;
 using TableAttribute = LinqToDB.Mapping.TableAttribute;
-using ServiceCoffeeRoom.Core.Domain.Base;
 
 namespace ServiceСoffeeRoom.Domain
 {
@@ -12,7 +11,7 @@ namespace ServiceСoffeeRoom.Domain
         const int _defaultWeight = 1000;
 
         [Column]
-        public string Mark { get; private set; }
+        public string Mark { get; private set; } = string.Empty;
 
         [Column]
         public int Weight { get; private set; }
@@ -45,7 +44,6 @@ namespace ServiceСoffeeRoom.Domain
         }
         protected Beans() : base(Guid.NewGuid()) 
         {
-        
         }
         public bool Use(int weigthCup) 
         {

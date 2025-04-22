@@ -16,7 +16,7 @@ namespace ServiceСoffeeRoom.Applications
     {
         public async Task<RoomDto?> GetRoom(CancellationToken token = default)
         {
-            Room room = (await roomRepository.GetAllAsync(token)).FirstOrDefault();
+            Room? room = (await roomRepository.GetAllAsync(token)).FirstOrDefault();
             if (room is null) return null;
 
             CoffeeMachine machine = await coffeeMachineRepository.GetByIdAsync(room.CoffeeMachineId, token)

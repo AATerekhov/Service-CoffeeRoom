@@ -8,7 +8,7 @@ namespace ServiceCoffeeRoom.Services.Applications.DtoModel.Beans
 {
     public class CreateBeansDto
     {
-        public string Mark { get;  set; }
+        public required string Mark { get;  set; }
         public int Weight { get; set; }
         public int Price { get; set; }
     }

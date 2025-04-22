@@ -1,6 +1,7 @@
 ﻿using ServiceCoffeeRoom.Services.Applications.Abstractions;
 using ServiceCoffeeRoom.Services.Applications.DtoModel.CoffeeMachineModel;
 using ServiceCoffeeRoom.Services.Applications.DtoModel.Person;
+using ServiceCoffeeRoom.Services.Applications.DtoModel.Room;
 using ServiceCoffeeRoom.Services.Applications.Exeptions;
 using ServiceСoffeeRoom.Applications.Abstractions;
 using ServiceСoffeeRoom.Clients.Abstractions;
@@ -11,16 +12,35 @@ using File = System.IO.File;
 
 namespace ServiceСoffeeRoom.Clients
 {
-    public class CoffeMachineClient(ITelegramBotClient client,
-        IRoomService roomService,
-        IPersonService personService,
-        ICupService cupService,
-        IPaymentService paymentService,
-        IServiceService serviceService) : MessageClient(client)
+    public class CoffeMachineClient: MessageClient 
     {
+
+        private readonly IRoomService _roomService;
+        private readonly IPersonService _personService;
+        private readonly ICupService _cupService;
+        private readonly IPaymentService _paymentService;
+        private readonly IServiceService _serviceService;
+
+        public CoffeMachineClient(
+            ITelegramBotClient client,
+            IRoomService roomService,
+            IPersonService personService,
+            ICupService cupService,
+            IPaymentService paymentService,
+            IServiceService serviceService)
+            : base(client) // Вызов конструктора базового класса
+        {
+            _roomService = roomService;
+            _personService = personService;
+            _cupService = cupService;
+            _paymentService = paymentService;
+            _serviceService = serviceService;
+        }
         public async Task<long> StartCoffeeMachine(long chatId, PersonDto user, CancellationToken token)
         {
-            var room = await roomService.GetRoom(token);
+            var room = await _roomService.GetRoom(token)
+                ?? throw new ArgumentNullException(nameof(RoomDto));
+
             //Логика контроллера.
             return await CreateMessage(chatId, room.CoffeeMachine, user, token);
         }
@@ -28,9 +48,9 @@ namespace ServiceСoffeeRoom.Clients
         public async Task<long> AddCash(long chatId, Message messageValue, PersonDto? user, CancellationToken token) 
         {
             int.TryParse(messageValue.Text, out int cash);
-            var result = await paymentService.AddCashAsync(user!.Id, cash, token);
+            var result = await _paymentService.AddCashAsync(user!.Id, cash, token);
             if (result)
-                user = await personService.GetPersonByIdAsync(user.Id,token);
+                user = await _personService.GetPersonByIdAsync(user.Id,token);
             return result switch
             {
                 true => await UpdateMessage(chatId, user!, token),
@@ -41,9 +61,9 @@ namespace ServiceСoffeeRoom.Clients
 
         public async Task<long> AddServiceProcedureAsync(long chatId, PersonDto? user, CancellationToken token)
         {
-            var result = await serviceService.AddServiceAsync(user!.Id, token);
+            var result = await _serviceService.AddServiceAsync(user!.Id, token);
             if (result)
-                user = await personService.GetPersonByIdAsync(user.Id, token);
+                user = await _personService.GetPersonByIdAsync(user.Id, token);
             return result switch
             {
                 true => await UpdateMessage(chatId, user!, token),
@@ -53,9 +73,9 @@ namespace ServiceСoffeeRoom.Clients
 
         public async Task<long> UseCoffeeMachine(long chatId, Message messageValue, PersonDto user, CancellationToken token)
         {
-            if (await cupService.UseCoffeeMachineAsync(user.Id))
+            if (await _cupService.UseCoffeeMachineAsync(user.Id))
             { 
-                user = await personService.GetPersonByIdAsync(user.Id, token)
+                user = await _personService.GetPersonByIdAsync(user.Id, token)
                     ?? throw new EntiyNotFoundExeption(user.Id.ToString(), nameof(PersonDto));
                 return await UpdateMessage(chatId, user, token);            
             }
@@ -66,7 +86,7 @@ namespace ServiceСoffeeRoom.Clients
         {
             CoffeeMachineStatus status = GetStatus(coffee);
 
-            var result = await client.SendPhotoAsync(
+            var result = await _client.SendPhotoAsync(
                 chatId: chatId,
                 photo: InputFile.FromStream(stream: new MemoryStream(File.ReadAllBytes(ImagesCatalog.GetCoffeeMachine()))),
                 caption: TextMessages.CoffeemachineUserInfo(coffee, user),
@@ -91,10 +111,10 @@ namespace ServiceСoffeeRoom.Clients
             var message = await GetMessageById(chatId, token);
             if (message is null)
                 return chatId;
-            var room = await roomService.GetRoom(token);
+            var room = await _roomService.GetRoom(token);
             var coffee = room!.CoffeeMachine;
             CoffeeMachineStatus status = GetStatus(coffee);
-            var result = await client.EditMessageCaptionAsync(chatId: chatId,
+            var result = await _client.EditMessageCaptionAsync(chatId: chatId,
                             messageId: message.MessageId, 
                             caption: TextMessages.CoffeemachineUserInfo(coffee, user),
                             parseMode: Telegram.Bot.Types.Enums.ParseMode.Html,

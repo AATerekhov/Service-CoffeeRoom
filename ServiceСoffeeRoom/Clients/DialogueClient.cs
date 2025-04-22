@@ -10,27 +10,41 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace ServiceСoffeeRoom.Clients
 {
-    public class DialogueClient(
+    public class DialogueClient : MessageClient
+    {
+        private readonly IPersonService _personService;
+        private readonly IRoomService _roomService;
+        private readonly RoomClient _roomClient;
+        private readonly CoffeMachineClient _coffeMachineClient;
+        public DialogueClient(
         ITelegramBotClient client,
         IPersonService personService,
         IRoomService roomService,
         RoomClient roomClient,
-        CoffeMachineClient coffeMachineClient) : MessageClient(client)
-    {
-        public async Task<Message> ProcessingMessage(Message message, CancellationToken token)
+        CoffeMachineClient coffeMachineClient) : base(client)
         {
+            _personService = personService;
+            _roomService = roomService;
+            _roomClient = roomClient;
+           _coffeMachineClient = coffeMachineClient;
 
+        }
+        public async Task<Message> ProcessingMessage(Message message, CancellationToken token)
+        {        
             //Идентификация
-            var thisPerson = await personService.GetPersonByIdAsync(message.From.Id, token);
+
+            if (message.From == null) throw new ArgumentNullException(nameof(message.From));
+            
+            var thisPerson = await _personService.GetPersonByIdAsync(message.From.Id, token);
             if (thisPerson is null)
             {
                 var porsonInfo = new CreatePersonDto()
                 {
                     Id = message.From.Id,
                     Name = message.From.FirstName + " " + message.From.LastName,
-                    TelegramAccaunt = message.From.Username
+                    TelegramAccaunt = string.IsNullOrEmpty(message.From.Username) ? string.Empty : message.From.Username,
                 };
-                thisPerson = await personService.CreatePersonAsync(porsonInfo, token);
+                thisPerson = await _personService.CreatePersonAsync(porsonInfo, token);
             }
             else if (string.IsNullOrEmpty(thisPerson.Name))
             {
@@ -38,26 +52,27 @@ namespace ServiceСoffeeRoom.Clients
                 {
                     Id = message.From.Id,
                     Name = message.From.FirstName + " " + message.From.LastName,
-                    TelegramAccaunt = message.From.Username
+                    TelegramAccaunt = string.IsNullOrEmpty(message.From.Username) ? string.Empty : message.From.Username
                 };
-                if(await personService.UpdatePersonAsync(porsonInfo, token))
-                    thisPerson = await personService.GetPersonByIdAsync(message.From.Id, token);
+                if(await _personService.UpdatePersonAsync(porsonInfo, token))
+                    thisPerson = await _personService.GetPersonByIdAsync(message.From.Id, token);
             }
             var chatId = message.Chat.Id;
 
             //Операции отмены диалогов
             _ = message.Text switch
             {
-                "Выйти из админки" => await Remove(await roomClient.RemoveRoomDialog(chatId, token), token),
-                "Выйти из комнаты" => await Remove(await coffeMachineClient.RemoveDialog(chatId, token), token),
+                "Выйти из админки" => await Remove(await _roomClient.RemoveRoomDialog(chatId, token), token),
+                "Выйти из комнаты" => await Remove(await _coffeMachineClient.RemoveDialog(chatId, token), token),
                 "Отмена" => await Remove(await DeleteServiceMessage(message, token), token),
                 _ => chatId
             };
 
+            if (thisPerson is null) throw new ArgumentException(nameof(thisPerson));
             //Валидация запроса.
             var resultValid = message.Text switch
             {
-                "/start" => await client.SendTextMessageAsync(await DeleteServiceMessage(message, token), TextMessages.Greeting(thisPerson.Name),parseMode:Telegram.Bot.Types.Enums.ParseMode.Html, cancellationToken: token),
+                "/start" => await _client.SendTextMessageAsync(await DeleteServiceMessage(message, token), TextMessages.Greeting(thisPerson.Name), parseMode: Telegram.Bot.Types.Enums.ParseMode.Html, cancellationToken: token),
                 _ => message
             };
 
@@ -70,16 +85,16 @@ namespace ServiceСoffeeRoom.Clients
             {
                 var result = oldMessage.Caption switch
                 {
-                    "/roomAddUser" => await SendReplyKeyboard(await roomClient.AddUserInRoom(await DeleteServiceMessage(message, token), message.UserShared!.UserId, token), TextMessages.Instruction("Кофейной комнаты"), Keyboards.ForRoomAdmin, token),
-                    "/roomAddBeans" => await SendReplyKeyboard(await roomClient.AddBeansInRoom(await DeleteServiceMessage(message, token), message, token), TextMessages.Instruction("Кофейной комнаты"), Keyboards.ForRoomAdmin, token),
-                    "/roomEditServiceCoins" => await SendReplyKeyboard(await roomClient.EditServiceCoinsInRoom(await DeleteServiceMessage(message, token), message, token), TextMessages.Instruction("Кофейной комнаты"), Keyboards.ForRoomAdmin, token),
-                    "/roomEditServiceInterval" => await SendReplyKeyboard(await roomClient.EditServiceIntervalInRoom(await DeleteServiceMessage(message,token), message, token), TextMessages.Instruction("Кофейной комнаты"), Keyboards.ForRoomAdmin, token),
-                    "/roomEditNameRoom" => await SendReplyKeyboard(await roomClient.EditServiceNameInRoom(await DeleteServiceMessage(message, token), message, token), TextMessages.Instruction("Кофейной комнаты"), Keyboards.ForRoomAdmin, token),
+                    "/roomAddUser" => await SendReplyKeyboard(await _roomClient.AddUserInRoom(await DeleteServiceMessage(message, token), message.UserShared!.UserId, token), TextMessages.Instruction("Кофейной комнаты"), Keyboards.ForRoomAdmin, token),
+                    "/roomAddBeans" => await SendReplyKeyboard(await _roomClient.AddBeansInRoom(await DeleteServiceMessage(message, token), message, token), TextMessages.Instruction("Кофейной комнаты"), Keyboards.ForRoomAdmin, token),
+                    "/roomEditServiceCoins" => await SendReplyKeyboard(await _roomClient.EditServiceCoinsInRoom(await DeleteServiceMessage(message, token), message, token), TextMessages.Instruction("Кофейной комнаты"), Keyboards.ForRoomAdmin, token),
+                    "/roomEditServiceInterval" => await SendReplyKeyboard(await _roomClient.EditServiceIntervalInRoom(await DeleteServiceMessage(message,token), message, token), TextMessages.Instruction("Кофейной комнаты"), Keyboards.ForRoomAdmin, token),
+                    "/roomEditNameRoom" => await SendReplyKeyboard(await _roomClient.EditServiceNameInRoom(await DeleteServiceMessage(message, token), message, token), TextMessages.Instruction("Кофейной комнаты"), Keyboards.ForRoomAdmin, token),
                     //"/roomDeleteUser" =>,
                     //"/roomEditAdmin" =>,
-                    "/userUse" => await SendReplyKeyboard(await coffeMachineClient.UseCoffeeMachine(await DeleteServiceMessage(message, token), message, thisPerson!, token), TextMessages.Use(), Keyboards.ForCoffeemachineUse, token),
-                    "/userAddBalance" => await SendReplyKeyboard(await coffeMachineClient.AddCash(await DeleteServiceMessage(message, token), message, thisPerson!, token), TextMessages.Use(), Keyboards.ForCoffeemachineUse, token),
-                    "/userAddService" => await SendReplyKeyboard(await coffeMachineClient.AddServiceProcedureAsync(await DeleteServiceMessage(message, token), thisPerson!, token), TextMessages.Use(), Keyboards.ForCoffeemachineUse, token),
+                    "/userUse" => await SendReplyKeyboard(await _coffeMachineClient.UseCoffeeMachine(await DeleteServiceMessage(message, token), message, thisPerson!, token), TextMessages.Use(), Keyboards.ForCoffeemachineUse, token),
+                    "/userAddBalance" => await SendReplyKeyboard(await _coffeMachineClient.AddCash(await DeleteServiceMessage(message, token), message, thisPerson!, token), TextMessages.Use(), Keyboards.ForCoffeemachineUse, token),
+                    "/userAddService" => await SendReplyKeyboard(await _coffeMachineClient.AddServiceProcedureAsync(await DeleteServiceMessage(message, token), thisPerson!, token), TextMessages.Use(), Keyboards.ForCoffeemachineUse, token),
                     _ => message
                 };
                 if (result.Equals(message) is false)
@@ -87,15 +102,14 @@ namespace ServiceСoffeeRoom.Clients
             }                
 
             //Получаем комнату.
-            var room = await roomService.GetRoom();
+            var room = await _roomService.GetRoom();
             if (room is not null)
             {
                 if (message.Text is "Воспользоваться" || message.Text is "/coffee")
                 {
-                    _ = await roomClient.RemoveRoomDialog(chatId, token);
-                    return await SendReplyKeyboard(await coffeMachineClient.StartCoffeeMachine(await DeleteTheOfficialQuestionAndAnswer(message, token), thisPerson!, token), TextMessages.Use(), Keyboards.ForCoffeemachineUse, token); 
+                    _ = await _roomClient.RemoveRoomDialog(chatId, token);
+                    return await SendReplyKeyboard(await _coffeMachineClient.StartCoffeeMachine(await DeleteTheOfficialQuestionAndAnswer(message, token), thisPerson!, token), TextMessages.Use(), Keyboards.ForCoffeemachineUse, token); 
                 }
-
                 if (thisPerson.IsAdmin)
                     return await AdminBehavior(message, thisPerson, token);
                 else
@@ -105,13 +119,13 @@ namespace ServiceСoffeeRoom.Clients
             {
                 //Если комнаты нет, то ее можно только создать
                 if (message.Text is "Создать комнату")
-                    return await SendReplyKeyboard(await roomClient.StartRoom(await DeleteServiceMessage(message, token), thisPerson, token), TextMessages.Instruction("Комнаты"), Keyboards.ForRoomAdmin, token);
+                    return await SendReplyKeyboard(await _roomClient.StartRoom(await DeleteServiceMessage(message, token), thisPerson, token), TextMessages.Instruction("Комнаты"), Keyboards.ForRoomAdmin, token);
                 else
                     return await SendReplyKeyboard(await DeleteServiceMessage(message, token), TextMessages.CreateRoom(), Keyboards.ForCreateRoom, token);
             }
         }
 
-        private async Task<Message> UserBehavior(Message message, PersonDto thisPerson, RoomDto? room, CancellationToken token)
+        private async Task<Message> UserBehavior(Message message, PersonDto thisPerson, RoomDto room, CancellationToken token)
         {
             if (thisPerson.IsUser)
                 return await SendReplyKeyboard(await DeleteServiceMessage(message, token), TextMessages.UserRights(thisPerson.Name), Keyboards.ForUserRightsRoom, token);
@@ -123,8 +137,8 @@ namespace ServiceСoffeeRoom.Clients
         {
             if (message.Text is "Администрировать" || message.Text is "/admin")
             {
-                _ = await coffeMachineClient.RemoveDialog(message.Chat.Id, token);
-                return await SendReplyKeyboard(await roomClient.StartRoom(await DeleteTheOfficialQuestionAndAnswer(message, token), thisPerson, token), TextMessages.Instruction("Кофейной комнаты"), Keyboards.ForRoomAdmin, token);
+                _ = await _coffeMachineClient.RemoveDialog(message.Chat.Id, token);
+                return await SendReplyKeyboard(await _roomClient.StartRoom(await DeleteTheOfficialQuestionAndAnswer(message, token), thisPerson, token), TextMessages.Instruction("Кофейной комнаты"), Keyboards.ForRoomAdmin, token);
             }
 
             if (thisPerson.IsUser)
@@ -142,13 +156,13 @@ namespace ServiceСoffeeRoom.Clients
         private async Task<long> DeleteServiceMessage(Message message, CancellationToken token)
         {
             var result = message.Chat.Id;
-            await client.DeleteMessageAsync(chatId: message.Chat.Id, messageId: message.MessageId, cancellationToken: token);
+            await _client.DeleteMessageAsync(chatId: message.Chat.Id, messageId: message.MessageId, cancellationToken: token);
             return result;
         }
 
         public async Task<Message> SendReplyKeyboard(long chatId, string text, Func<ReplyKeyboardMarkup> keyboard, CancellationToken token = default)
         {
-            var message = await client.SendTextMessageAsync(
+            var message = await _client.SendTextMessageAsync(
                 chatId: chatId,
                 text: text,
                 parseMode: Telegram.Bot.Types.Enums.ParseMode.Html,
@@ -160,7 +174,7 @@ namespace ServiceСoffeeRoom.Clients
 
         public async Task<Message> SendReplyKeyboardExpectedResponse(long chatId,string caption ,string text, Func<ReplyKeyboardMarkup> keyboard, CancellationToken token = default)
         {
-            var message = await client.SendTextMessageAsync(
+            var message = await _client.SendTextMessageAsync(
                 chatId: chatId,
                 text: text,
                 parseMode:Telegram.Bot.Types.Enums.ParseMode.Html,

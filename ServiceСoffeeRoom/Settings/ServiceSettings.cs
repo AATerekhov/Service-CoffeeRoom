@@ -2,7 +2,7 @@
 {
     public class ServiceSettings
     {
-        public string? KEY_TELEGRAM { get; set; }
-        public string? DATA_TELEGRAM { get; set; }
+        public required string KEY_TELEGRAM { get; set; }
+        public required string DATA_TELEGRAM { get; set; }
     }
 }
