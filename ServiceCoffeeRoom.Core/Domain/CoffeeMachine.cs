@@ -13,7 +13,7 @@ namespace ServiceСoffeeRoom.Domain
         const int _limitService = 50;
 
         [Column]
-        public string Name { get; private set; }
+        public string Name { get; private set; } = string.Empty;
 
         [Column]
         [ForeignKey("FK_CoffeeMachines_BeansBags_BeansId")]

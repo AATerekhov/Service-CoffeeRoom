@@ -9,10 +9,10 @@ namespace ServiceСoffeeRoom.Domain
     public class Person : Entity<long>, IProtorype<Person>
     {
         [Column]
-        public string? Name { get; private set; }
+        public string Name { get; private set; } = string.Empty;
 
         [Column]
-        public string? TelegramAccaunt { get; private set; }
+        public string TelegramAccaunt { get; private set; } = string.Empty;
 
         [Column]
         public bool IsAdmin { get; private set; }
@@ -23,7 +23,7 @@ namespace ServiceСoffeeRoom.Domain
         [Column]
         public int CashAccount { get; set; }
 
-        public Person(long id, string? name, string? telegramAccaunt, bool isAdmin, bool isUser) : base(id)
+        public Person(long id, string name, string telegramAccaunt, bool isAdmin, bool isUser) : base(id)
         {
             Id = id;
             Name = name;
@@ -33,7 +33,7 @@ namespace ServiceСoffeeRoom.Domain
             CashAccount = 0;
         }
         public Person(long id)
-        : this(id, null, null, false, true)
+        : this(id, string.Empty, string.Empty, false, true)
         {
 
         }

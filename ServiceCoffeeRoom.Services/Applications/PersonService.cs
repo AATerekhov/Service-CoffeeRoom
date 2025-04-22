@@ -7,8 +7,7 @@ using ServiceСoffeeRoom.Domain;
 
 namespace ServiceСoffeeRoom.Applications
 {
-    public class PersonService(IPersonRepository personRepository,
-                               ICupRepository cupRepository) : IPersonService
+    public class PersonService(IPersonRepository personRepository) : IPersonService
     {
         public async Task<PersonDto> AddUserAsync(long id, CancellationToken cancellationToken = default)
         {

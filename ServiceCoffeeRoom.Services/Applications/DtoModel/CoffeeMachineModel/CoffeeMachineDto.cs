@@ -4,7 +4,7 @@ namespace ServiceCoffeeRoom.Services.Applications.DtoModel.CoffeeMachineModel
 {
     public class CoffeeMachineDto
     {
-        public string Name { get; set; }
+        public required string Name { get; set; }
         public BeansDto? Beans { get; set; }
         public int PriceСup { get; set; }
         public int CountCupAll { get; set; }

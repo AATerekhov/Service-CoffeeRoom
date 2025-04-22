@@ -17,7 +17,8 @@ namespace ServiceСoffeeRoom.Extentions
                 {
                     CoffeeMachineStatus.Good => InlineKeyboardButton.WithCallbackData("\t☕ Кофя", "/userUse"),
                     CoffeeMachineStatus.NoBeans => InlineKeyboardButton.WithCallbackData("\t🥜 Зерна", "/userAddBeans") ,
-                    CoffeeMachineStatus.ServiceRequired => InlineKeyboardButton.WithCallbackData("\t🛠️ Сервис", "/userAddService") 
+                    _=> InlineKeyboardButton.WithCallbackData("\t🛠️ Сервис", "/userAddService") 
+                    
                 } , InlineKeyboardButton.WithCallbackData("\t💲 Баланс", "/userAddBalance")}
             });
     }

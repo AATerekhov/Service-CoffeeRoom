@@ -28,15 +28,21 @@ namespace ServiceСoffeeRoom
         async Task HandleErrorAsync(ITelegramBotClient client, Exception exception, CancellationToken token)
         {
             logger.LogError(exception.Message);
+            await Task.CompletedTask;
         }
 
         async Task HandleUpdateAsync(ITelegramBotClient client, Update update, CancellationToken token)
         {           
             try
             {
+               
                 Message? result = update.Type switch
                 {
-                    UpdateType.Message => await dialogueClient.ProcessingMessage(update.Message, token),
+                    UpdateType.Message => update.Message switch 
+                    { 
+                        null => null,
+                        _ => await dialogueClient.ProcessingMessage(update.Message, token)
+                    },
                     UpdateType.CallbackQuery => await callbackClient.ProcessingCallback(update, token),
                     _ => update.Message
                 };                

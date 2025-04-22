@@ -3,12 +3,13 @@ using Telegram.Bot.Types;
 
 namespace ServiceСoffeeRoom.Clients
 {
-    public class CallbackClient(DialogueClient dialogueClient, RoomClient roomClient)
+    public class CallbackClient(DialogueClient dialogueClient)
     {
         public async Task<Message?> ProcessingCallback(Update update, CancellationToken token = default)
         {            
             var command = update.CallbackQuery!.Data;
-            var message = update.CallbackQuery!.Message;
+            Message? message = update.CallbackQuery!.Message;
+            if (message == null) throw new ArgumentNullException(nameof(message));
             Message? result = command switch
             {
                 "/roomAddUser" => await dialogueClient.SendReplyKeyboardExpectedResponse(message.Chat.Id, "/roomAddUser", TextMessages.RequestUser(), Keyboards.RequestUser, token),               

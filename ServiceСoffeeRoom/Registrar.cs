@@ -14,8 +14,9 @@ namespace ServiceСoffeeRoom
     {
         public static IServiceCollection AddTelegramBot(this IServiceCollection services, IConfiguration configuration)
         {
-            var keyTelegram = configuration.Get<ServiceSettings>().KEY_TELEGRAM;
-            services.AddSingleton<ITelegramBotClient>(х =>  new TelegramBotClient(keyTelegram));
+            string? keyTelegram = configuration.Get<ServiceSettings>()?.KEY_TELEGRAM;
+            if(!string.IsNullOrEmpty(keyTelegram))
+                services.AddSingleton<ITelegramBotClient>(х =>  new TelegramBotClient(keyTelegram));
             return services;
         }
         public static IServiceCollection AddRepositories(this IServiceCollection services)

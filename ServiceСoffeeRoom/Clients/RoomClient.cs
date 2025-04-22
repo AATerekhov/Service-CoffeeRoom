@@ -15,18 +15,29 @@ namespace ServiceСoffeeRoom.Clients
     /// Содержит коллекции диологовых окон CRUD комнаты.
     /// </summary>
     /// <param name="client"></param>
-    public class RoomClient(ITelegramBotClient client, 
-        IRoomService roomService, 
-        IPersonService personService,
-        IBeansService beansService) : MessageClient(client)
+    public class RoomClient : MessageClient
     {
+        private readonly IRoomService _roomService;
+        private readonly IPersonService _personService;
+        private readonly IBeansService _beansService;
+
+        public RoomClient(ITelegramBotClient client,
+        IRoomService roomService,
+        IPersonService personService,
+        IBeansService beansService) : base (client)
+        {
+            _beansService = beansService;
+            _roomService = roomService;
+            _personService = personService;
+        }
         public async Task<long> UpdateMessage(long chatId, CancellationToken token)
         {
             var message = await GetMessageById(chatId, token);
             if (message is null)
                 return chatId;
-            RoomDto? room = await roomService.GetRoom(token);
-            var result = await client.EditMessageCaptionAsync(chatId: chatId,
+            RoomDto room = await _roomService.GetRoom(token)
+                ?? throw new ArgumentNullException(nameof(RoomDto));
+            var result = await _client.EditMessageCaptionAsync(chatId: chatId,
                             messageId: message.MessageId,
                             caption: TextMessages.RoomAdminInfo(room),
                             parseMode: Telegram.Bot.Types.Enums.ParseMode.Html,
@@ -36,7 +47,7 @@ namespace ServiceСoffeeRoom.Clients
         }
         public async Task<long> AddBeansInRoom(long chatId, Message messageValue, CancellationToken token)
         {
-            var room = await roomService.GetRoom(token);
+            var room = await _roomService.GetRoom(token);
             if (room is null)
                 return chatId;
 
@@ -51,17 +62,17 @@ namespace ServiceСoffeeRoom.Clients
                 Mark = "CoffeeBeans",
                 Weight = weight
             };
-            _ = await beansService.AddBeansAsync(beansInfo, token);
+            _ = await _beansService.AddBeansAsync(beansInfo, token);
             return chatId;
         }
         public async Task<long> AddUserInRoom(long chatId, long UserId, CancellationToken token)
         {
-            _ = await personService.AddUserAsync(UserId, token);
+            _ = await _personService.AddUserAsync(UserId, token);
             return await this.UpdateMessage(chatId, token);
         }
         public async Task<long> EditServiceIntervalInRoom(long chatId, Message messageValue, CancellationToken token)
         {
-            var room = await roomService.GetRoom(token);
+            var room = await _roomService.GetRoom(token);
             if (room is null)
                 return chatId;
             int.TryParse(messageValue.Text, out int value);
@@ -75,7 +86,7 @@ namespace ServiceСoffeeRoom.Clients
                     LimitService = value,
                     PriceService = room.PriceService
                 };
-                _ = await roomService.UpdateRoom(roomInfo, token);
+                _ = await _roomService.UpdateRoom(roomInfo, token);
                 return await this.UpdateMessage(chatId, token);
             }
 
@@ -83,7 +94,7 @@ namespace ServiceСoffeeRoom.Clients
         }
         public async Task<long> EditServiceCoinsInRoom(long chatId, Message messageValue, CancellationToken token)
         {
-            var room = await roomService.GetRoom(token);
+            var room = await _roomService.GetRoom(token);
             if (room is null)
                 return chatId;
             int.TryParse(messageValue.Text, out int value);
@@ -97,7 +108,7 @@ namespace ServiceСoffeeRoom.Clients
                     LimitService = room.CoffeeMachine!.LimitService,
                     PriceService = value
                 };
-                _ = await roomService.UpdateRoom(roomInfo, token);
+                _ = await _roomService.UpdateRoom(roomInfo, token);
                 return await this.UpdateMessage(chatId, token);
             }
 
@@ -105,7 +116,7 @@ namespace ServiceСoffeeRoom.Clients
         }
         public async Task<long> EditServiceNameInRoom(long chatId, Message messageValue, CancellationToken token)
         {
-            var room = await roomService.GetRoom(token);
+            var room = await _roomService.GetRoom(token);
             if (room is null)
                 return chatId;
             var roomInfo = new UpdateRoomDto()
@@ -116,24 +127,24 @@ namespace ServiceСoffeeRoom.Clients
                 LimitService = room.CoffeeMachine!.LimitService,
                 PriceService = room.PriceService
             };
-            _ = await roomService.UpdateRoom(roomInfo, token);
+            _ = await _roomService.UpdateRoom(roomInfo, token);
             return await this.UpdateMessage(chatId, token);
         }
 
         public async Task<long> StartRoom(long chatId, PersonDto admin, CancellationToken token)
         {
-            var room = await roomService.GetRoom(token);
+            var room = await _roomService.GetRoom(token);
             if (room is null)
             {
                 var roomInfo = new CreateRoomDto() { Name = "Уютная кофейня", AdminId = admin.Id };
-                room = await roomService.CreateRoomAsync(roomInfo, token);
+                room = await _roomService.CreateRoomAsync(roomInfo, token);
             }
             return await CreateMessage(chatId, room, token);
         }
 
-        private async Task<long> CreateMessage(long chatId, RoomDto? room, CancellationToken token)
+        private async Task<long> CreateMessage(long chatId, RoomDto room, CancellationToken token)
         {
-            var result = await client.SendPhotoAsync(
+            var result = await _client.SendPhotoAsync(
                 chatId: chatId,
                 photo: InputFile.FromStream(stream: new MemoryStream(File.ReadAllBytes(ImagesCatalog.GetRoom()))),
                 caption: TextMessages.RoomAdminInfo(room),

@@ -1,19 +1,23 @@
-﻿using Newtonsoft.Json.Linq;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 
 namespace ServiceСoffeeRoom.Clients.Abstractions
 {
-    public abstract class MessageClient(ITelegramBotClient client)
+    public abstract class MessageClient
     {
+        protected readonly ITelegramBotClient _client;
+        protected MessageClient(ITelegramBotClient client)
+        {
+            _client = client;
+        }
         readonly ConcurrentDictionary<long, Message> date = new();
         protected async Task<Message>  GetMessageById(long id, CancellationToken token) 
         {
             token.ThrowIfCancellationRequested();
             date.TryGetValue(id, out Message? oldMessage);
-            return oldMessage;
+            if (oldMessage == null) throw new ArgumentNullException(nameof(oldMessage));
+            return await Task.FromResult(oldMessage);
         }
         protected Message Add(Message message)
         {
@@ -26,7 +30,7 @@ namespace ServiceСoffeeRoom.Clients.Abstractions
             token.ThrowIfCancellationRequested();
             date.TryRemove(key, out Message? message);
             if (message is not null)
-                await client.DeleteMessageAsync(chatId: key, messageId: message.MessageId, token);
+                await _client.DeleteMessageAsync(chatId: key, messageId: message.MessageId, token);
             return key;
         }
 
@@ -36,7 +40,7 @@ namespace ServiceСoffeeRoom.Clients.Abstractions
             date.TryGetValue(message.Chat.Id, out Message? oldMessage);
             if (oldMessage is not null)
             {
-                await client.DeleteMessageAsync(chatId: message.Chat.Id, messageId: oldMessage.MessageId, token);
+                await _client.DeleteMessageAsync(chatId: message.Chat.Id, messageId: oldMessage.MessageId, token);
                 date.TryUpdate(message.Chat.Id, message, oldMessage);
             }
             else Add(message);
